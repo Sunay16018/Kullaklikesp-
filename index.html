@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCORD - X OS | Ultimate Controller</title>
+    <style>
+        :root {
+            --neon: #00f2ff;
+            --bg: #050a0f;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(0, 242, 255, 0.2);
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% 50%, #102030 0%, #050a0f 100%);
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .os-container {
+            width: 90%;
+            max-width: 450px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 20px rgba(0, 242, 255, 0.1);
+            position: relative;
+        }
+
+        .os-container::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, var(--neon), transparent, var(--neon));
+            z-index: -1;
+            border-radius: 32px;
+            opacity: 0.1;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #fff, var(--neon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--neon);
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+        }
+
+        .card:hover { border-color: var(--neon); transform: translateY(-5px); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: var(--neon);
+            color: #000;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        button:hover { filter: brightness(1.2); box-shadow: 0 0 25px var(--neon); }
+
+        input[type="text"] {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 10px;
+            color: white;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .file-zone {
+            border: 2px dashed var(--border);
+            padding: 20px;
+            text-align: center;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #playlist-viewer {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 11px;
+            margin-top: 10px;
+            color: #888;
+        }
+
+        /* Ses Dalgası Animasyonu */
+        .wave-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3px;
+            height: 30px;
+            margin-top: 20px;
+        }
+        .bar { width: 3px; height: 100%; background: var(--neon); border-radius: 10px; animation: wave 1s infinite; }
+        @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 30px; } }
+    </style>
+</head>
+<body>
+
+<div class="os-container">
+    <h1>MCORD X</h1>
+    <div class="status-bar" id="os-status">SYSTEM READY // IDLE</div>
+
+    <div class="card">
+        <button onclick="connectBT()">CONNECT TO HEADSET</button>
+    </div>
+
+    <div class="card">
+        <input type="text" id="voiceMsg" placeholder="System message...">
+        <button onclick="speakText()" style="background: transparent; color: var(--neon); border: 1px solid var(--neon);">SPEAK TO DEVICE</button>
+    </div>
+
+    <div class="card">
+        <div class="file-zone" onclick="document.getElementById('musicFiles').click()">
+            CHOOSE MUSIC FOR SD CARD
+            <input type="file" id="musicFiles" multiple accept="audio/mp3" style="display:none" onchange="updateList()">
+        </div>
+        <div id="playlist-viewer">No files selected.</div>
+        <button onclick="writeToCard()" style="margin-top: 15px; background: white; color: black;">DOWNLOAD TO SD CARD</button>
+    </div>
+
+    <div class="wave-container">
+        <div class="bar" style="animation-delay: 0.1s"></div>
+        <div class="bar" style="animation-delay: 0.2s"></div>
+        <div class="bar" style="animation-delay: 0.3s"></div>
+        <div class="bar" style="animation-delay: 0.4s"></div>
+        <div class="bar" style="animation-delay: 0.5s"></div>
+    </div>
+</div>
+
+<script>
+    const statusTxt = document.getElementById('os-status');
+    let files = [];
+
+    // 1. Gerçek Bluetooth Bağlantısı
+    async function connectBT() {
+        try {
+            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+            statusTxt.innerText = "CONNECTED: " + device.name.toUpperCase();
+            statusTxt.style.color = "#00ff00";
+        } catch (e) {
+            statusTxt.innerText = "ERROR: ACCESS DENIED";
+        }
+    }
+
+    // 2. Gerçek TTS (Konuşturma)
+    function speakText() {
+        const text = document.getElementById('voiceMsg').value || "Mcord System Active";
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'tr-TR';
+        window.speechSynthesis.speak(msg);
+    }
+
+    // 3. Gerçek Dosya Yönetimi
+    function updateList() {
+        const input = document.getElementById('musicFiles');
+        files = Array.from(input.files);
+        document.getElementById('playlist-viewer').innerHTML = files.map(f => `> ${f.name}`).join('<br>');
+    }
+
+    function writeToCard() {
+        if(files.length === 0) return alert("Select files first!");
+        files.forEach(file => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(file);
+            link.download = file.name;
+            link.click();
+        });
+        statusTxt.innerText = "FILES EXPORTED TO BUFFER";
+    }
+</script>
+
+</body>
+  </html>
+  
