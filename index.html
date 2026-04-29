@@ -1,215 +1,1159 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCORD - X OS | Ultimate Controller</title>
-    <style>
-        :root {
-            --neon: #00f2ff;
-            --bg: #050a0f;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(0, 242, 255, 0.2);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#03080c">
+  <meta name="description" content="MCORD-X Fütüristik Donanım Kontrol Arayüzü">
+  
+  <!-- PWA Manifest (Inline Base64) -->
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTUNPUkQtWCBDb250cm9sIEludGVyZmFjZSIsInNob3J0X25hbWUiOiJNQ09SRC1YIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwMzA4MGMiLCJ0aGVtZV9jb2xvciI6IiMwMGYyZmYiLCJpY29ucyI6W119">
 
-        body {
-            background-color: var(--bg);
-            background-image: radial-gradient(circle at 50% 50%, #102030 0%, #050a0f 100%);
-            color: white;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+  <title>MCORD-X | Hardware Control Interface</title>
 
-        .os-container {
-            width: 90%;
-            max-width: 450px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 30px;
-            padding: 40px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 20px rgba(0, 242, 255, 0.1);
-            position: relative;
-        }
+  <style>
+    /* ============================================
+       MCORD-X GLOBAL VARIABLES & RESET
+       ============================================ */
+    :root {
+      --bg-deep: #03080c;
+      --neon-cyan: #00f2ff;
+      --neon-cyan-dim: rgba(0, 242, 255, 0.15);
+      --glass-bg: rgba(0, 242, 255, 0.03);
+      --glass-border: rgba(0, 242, 255, 0.2);
+      --text-primary: #e0f7ff;
+      --text-dim: #8aaabb;
+      --danger: #ff2a6d;
+      --success: #05ffa1;
+      --warning: #ffcc00;
+      --font-stack: 'Courier New', Courier, 'Lucida Console', monospace;
+    }
 
-        .os-container::before {
-            content: '';
-            position: absolute;
-            top: -2px; left: -2px; right: -2px; bottom: -2px;
-            background: linear-gradient(45deg, var(--neon), transparent, var(--neon));
-            z-index: -1;
-            border-radius: 32px;
-            opacity: 0.1;
-        }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        h1 {
-            font-size: 28px;
-            font-weight: 800;
-            text-align: center;
-            letter-spacing: 5px;
-            margin-bottom: 5px;
-            background: linear-gradient(to right, #fff, var(--neon));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-stack);
+      font-size: 14px;
+      line-height: 1.5;
+    }
 
-        .status-bar {
-            text-align: center;
-            font-size: 10px;
-            letter-spacing: 2px;
-            color: var(--neon);
-            margin-bottom: 30px;
-            opacity: 0.8;
-        }
+    /* ============================================
+       SCANLINE & CRT OVERLAY EFFECTS
+       ============================================ */
+    body::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 2px, 3px 100%;
+      z-index: 9998;
+      pointer-events: none;
+    }
 
-        .card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: 0.3s;
-        }
+    body::after {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(0,242,255,0.03) 0%, rgba(3,8,12,0.4) 80%);
+      pointer-events: none;
+      z-index: 9997;
+    }
 
-        .card:hover { border-color: var(--neon); transform: translateY(-5px); }
+    /* ============================================
+       BOOT SEQUENCE OVERLAY
+       ============================================ */
+    #boot-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-deep);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      transition: opacity 0.8s ease-out;
+    }
 
-        button {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 12px;
-            background: var(--neon);
-            color: #000;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
-        }
+    .boot-terminal {
+      width: 100%;
+      max-width: 700px;
+      border: 1px solid var(--neon-cyan);
+      background: rgba(0, 10, 15, 0.95);
+      padding: 2rem;
+      box-shadow: 0 0 20px var(--neon-cyan-dim);
+    }
 
-        button:hover { filter: brightness(1.2); box-shadow: 0 0 25px var(--neon); }
+    .boot-line {
+      color: var(--neon-cyan);
+      font-size: 0.95rem;
+      min-height: 1.5rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
 
-        input[type="text"] {
-            width: 100%;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 10px;
-            color: white;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
+    .boot-progress-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 242, 255, 0.1);
+      margin-top: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
 
-        .file-zone {
-            border: 2px dashed var(--border);
-            padding: 20px;
-            text-align: center;
-            border-radius: 15px;
-            cursor: pointer;
-            font-size: 13px;
-        }
+    .boot-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transition: width 0.2s linear;
+    }
 
-        #playlist-viewer {
-            max-height: 100px;
-            overflow-y: auto;
-            font-size: 11px;
-            margin-top: 10px;
-            color: #888;
-        }
+    /* ============================================
+       GLASSMORPHISM PANELS
+       ============================================ */
+    .panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 0 20px var(--neon-cyan-dim);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
 
-        /* Ses Dalgası Animasyonu */
-        .wave-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 3px;
-            height: 30px;
-            margin-top: 20px;
-        }
-        .bar { width: 3px; height: 100%; background: var(--neon); border-radius: 10px; animation: wave 1s infinite; }
-        @keyframes wave { 0%, 100% { height: 5px; } 50% { height: 30px; } }
-    </style>
+    .panel:hover {
+      box-shadow: 0 0 25px rgba(0, 242, 255, 0.15), inset 0 0 20px var(--neon-cyan-dim);
+      border-color: rgba(0, 242, 255, 0.4);
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      animation: scanlineMove 3s linear infinite;
+      opacity: 0.5;
+    }
+
+    @keyframes scanlineMove {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .panel-header {
+      font-size: 1.1rem;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .panel-header::before {
+      content: '▸';
+      color: var(--neon-cyan);
+    }
+
+    /* ============================================
+       MAIN LAYOUT
+       ============================================ */
+    #app {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: rgba(0, 5, 10, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
+      letter-spacing: 4px;
+    }
+
+    .status-indicators {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      padding: 0.3rem 0.8rem;
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      background: rgba(0, 10, 15, 0.5);
+    }
+
+    .status-badge.active {
+      border-color: var(--success);
+      color: var(--success);
+      box-shadow: 0 0 8px rgba(5, 255, 161, 0.2);
+      text-shadow: 0 0 5px var(--success);
+    }
+
+    main.grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    footer#system-log {
+      height: 160px;
+      background: rgba(0, 5, 10, 0.8);
+      border-top: 1px solid var(--glass-border);
+      padding: 1rem;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+
+    .log-line {
+      margin-bottom: 0.3rem;
+      opacity: 0;
+      animation: fadeIn 0.3s forwards;
+    }
+
+    .log-time {
+      color: var(--text-dim);
+      margin-right: 0.5rem;
+    }
+
+    .log-info { color: var(--neon-cyan); }
+    .log-success { color: var(--success); text-shadow: 0 0 5px var(--success); }
+    .log-error { color: var(--danger); text-shadow: 0 0 5px var(--danger); }
+    .log-warning { color: var(--warning); }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* ============================================
+       FORM ELEMENTS & BUTTONS
+       ============================================ */
+    textarea, input[type="text"], input[type="file"] {
+      width: 100%;
+      background: rgba(0, 10, 15, 0.6);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      padding: 0.8rem;
+      font-family: var(--font-stack);
+      font-size: 0.9rem;
+      border-radius: 4px;
+      outline: none;
+      resize: vertical;
+      transition: all 0.3s ease;
+    }
+
+    textarea:focus, input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan-dim);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 242, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      margin: 0.5rem 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .control-group {
+      margin-bottom: 1rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.2rem;
+      background: transparent;
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      font-family: var(--font-stack);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn:hover {
+      background: rgba(0, 242, 255, 0.1);
+      box-shadow: 0 0 15px var(--neon-cyan-dim), inset 0 0 10px var(--neon-cyan-dim);
+      text-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn.primary {
+      background: var(--neon-cyan);
+      color: var(--bg-deep);
+      font-weight: bold;
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 0 20px var(--neon-cyan);
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.danger:hover {
+      background: rgba(255, 42, 109, 0.1);
+      box-shadow: 0 0 15px rgba(255, 42, 109, 0.3);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    /* ============================================
+       AUDIO VISUALIZER CANVAS
+       ============================================ */
+    #visualizer-canvas {
+      width: 100%;
+      height: 180px;
+      background: rgba(0, 5, 10, 0.5);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+    }
+
+    .viz-status {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .viz-status.active {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    /* ============================================
+       BLUETOOTH & SD MANAGER LISTS
+       ============================================ */
+    .device-list, .file-list {
+      list-style: none;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding-right: 0.5rem;
+    }
+
+    .device-list::-webkit-scrollbar, .file-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .device-list::-webkit-scrollbar-thumb, .file-list::-webkit-scrollbar-thumb {
+      background: var(--neon-cyan);
+      border-radius: 2px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem;
+      border-bottom: 1px solid rgba(0, 242, 255, 0.1);
+      font-size: 0.85rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .list-item:hover {
+      background: rgba(0, 242, 255, 0.03);
+    }
+
+    .list-item-name {
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    .list-item-meta {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 242, 255, 0.1);
+      border-radius: 2px;
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: width 0.3s ease;
+    }
+
+    .progress-fill.complete {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* ============================================
+       RESPONSIVE ADJUSTMENTS
+       ============================================ */
+    @media (max-width: 640px) {
+      main.grid {
+        grid-template-columns: 1fr;
+        padding: 0.75rem;
+        gap: 0.75rem;
+      }
+      .logo { font-size: 1.3rem; }
+      .panel { padding: 1rem; }
+      footer#system-log { height: 120px; font-size: 0.75rem; }
+      .boot-terminal { padding: 1rem; }
+    }
+
+    /* ============================================
+       UTILITY
+       ============================================ */
+    .hidden { display: none !important; }
+    .text-center { text-align: center; }
+    .mt-1 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 1rem; }
+  </style>
 </head>
 <body>
 
-<div class="os-container">
-    <h1>MCORD X</h1>
-    <div class="status-bar" id="os-status">SYSTEM READY // IDLE</div>
-
-    <div class="card">
-        <button onclick="connectBT()">CONNECT TO HEADSET</button>
+  <!-- ==========================================
+       BOOT SEQUENCE OVERLAY
+       ========================================== -->
+  <div id="boot-overlay">
+    <div class="boot-terminal">
+      <div id="boot-text" class="boot-line"></div>
+      <div class="boot-progress-container">
+        <div id="boot-progress" class="boot-progress-bar"></div>
+      </div>
     </div>
+  </div>
 
-    <div class="card">
-        <input type="text" id="voiceMsg" placeholder="System message...">
-        <button onclick="speakText()" style="background: transparent; color: var(--neon); border: 1px solid var(--neon);">SPEAK TO DEVICE</button>
-    </div>
+  <!-- ==========================================
+       MAIN APPLICATION
+       ========================================== -->
+  <div id="app">
+    
+    <!-- Header -->
+    <header>
+      <div class="logo">MCORD-X</div>
+      <div class="status-indicators">
+        <div class="status-badge" id="status-bt">BT: OFFLINE</div>
+        <div class="status-badge" id="status-sd">SD: STANDBY</div>
+        <div class="status-badge" id="status-audio">AUDIO: IDLE</div>
+      </div>
+    </header>
 
-    <div class="card">
-        <div class="file-zone" onclick="document.getElementById('musicFiles').click()">
-            CHOOSE MUSIC FOR SD CARD
-            <input type="file" id="musicFiles" multiple accept="audio/mp3" style="display:none" onchange="updateList()">
+    <!-- Main Grid -->
+    <main class="grid">
+      
+      <!-- TTS Engine Panel -->
+      <section class="panel" id="tts-panel">
+        <div class="panel-header">TTS Motoru</div>
+        
+        <div class="control-group">
+          <textarea id="tts-input" rows="4" placeholder="Seslendirilecek metni buraya girin...">MCORD-X sistemi aktif. Ses motoru test ediliyor.</textarea>
         </div>
-        <div id="playlist-viewer">No files selected.</div>
-        <button onclick="writeToCard()" style="margin-top: 15px; background: white; color: black;">DOWNLOAD TO SD CARD</button>
-    </div>
 
-    <div class="wave-container">
-        <div class="bar" style="animation-delay: 0.1s"></div>
-        <div class="bar" style="animation-delay: 0.2s"></div>
-        <div class="bar" style="animation-delay: 0.3s"></div>
-        <div class="bar" style="animation-delay: 0.4s"></div>
-        <div class="bar" style="animation-delay: 0.5s"></div>
-    </div>
-</div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Ses Tonu (Pitch)</span>
+            <span id="pitch-val">1.0</span>
+          </div>
+          <input type="range" id="pitch-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
 
-<script>
-    const statusTxt = document.getElementById('os-status');
-    let files = [];
+        <div class="control-group">
+          <div class="control-label">
+            <span>Konuşma Hızı (Rate)</span>
+            <span id="rate-val">1.0</span>
+          </div>
+          <input type="range" id="rate-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
 
-    // 1. Gerçek Bluetooth Bağlantısı
-    async function connectBT() {
-        try {
-            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-            statusTxt.innerText = "CONNECTED: " + device.name.toUpperCase();
-            statusTxt.style.color = "#00ff00";
-        } catch (e) {
-            statusTxt.innerText = "ERROR: ACCESS DENIED";
+        <div class="btn-group">
+          <button class="btn primary" id="btn-speak">
+            <span>▶</span> SESLENDİR
+          </button>
+          <button class="btn" id="btn-download-tts">
+            <span>⬇</span> MP3 İNDİR
+          </button>
+        </div>
+        
+        <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.75rem;">
+          * MP3 indirme, tarayıcı CORS politikalarına bağlıdır. Engellenirse yeni sekmede açılır.
+        </p>
+      </section>
+
+      <!-- Audio Visualizer Panel -->
+      <section class="panel" id="visualizer-panel">
+        <div class="panel-header">Ses Görselleştirici</div>
+        <canvas id="visualizer-canvas" width="600" height="180"></canvas>
+        <div class="viz-status" id="viz-status">SİSTEM BEKLEMEDE</div>
+      </section>
+
+      <!-- Bluetooth Manager Panel -->
+      <section class="panel" id="bluetooth-panel">
+        <div class="panel-header">Bluetooth Yöneticisi</div>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
+          Web Bluetooth API kullanarak çevre birimlerini tarar. Yalnızca HTTPS/Chrome destekler.
+        </p>
+        <button class="btn" id="btn-scan-bt">
+          <span>⟲</span> CİHAZ TARA
+        </button>
+        <ul class="device-list" id="bt-device-list"></ul>
+      </section>
+
+      <!-- SD Card Manager Panel -->
+      <section class="panel" id="sd-panel">
+        <div class="panel-header">SD Kart Yöneticisi</div>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
+          MP3 dosyalarını seçin. Blob URL mantığıyla pseudo-upload simülasyonu çalıştırılır.
+        </p>
+        
+        <label class="btn" style="display: block; text-align: center; cursor: pointer;">
+          <span>+</span> DOSYA SEÇ
+          <input type="file" id="sd-file-input" accept="audio/mpeg" multiple style="display: none;">
+        </label>
+        
+        <ul class="file-list" id="sd-file-list"></ul>
+      </section>
+
+    </main>
+
+    <!-- System Log Terminal -->
+    <footer id="system-log">
+      <div style="color: var(--neon-cyan); margin-bottom: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.3rem;">
+        > SYSTEM_LOG // v2.6.4
+      </div>
+      <div id="log-container"></div>
+    </footer>
+
+  </div>
+
+  <!-- ==========================================
+       JAVASCRIPT APPLICATION CORE
+       ========================================== -->
+  <script>
+    /**
+     * =====================================================
+     * MCORD-X SYSTEM CORE
+     * Vanilla JS, Modüler Mimari, Zero Dependency
+     * =====================================================
+     */
+
+    /* -----------------------------------------------------
+       1. SYSTEM LOGGER (Terminal Output)
+       ----------------------------------------------------- */
+    class SystemLog {
+      static container = document.getElementById('log-container');
+
+      static log(message, type = 'info') {
+        const time = new Date().toLocaleTimeString('tr-TR', { hour12: false });
+        const line = document.createElement('div');
+        line.className = `log-line log-${type}`;
+        line.innerHTML = `<span class="log-time">[${time}]</span> ${this.escapeHtml(message)}`;
+        this.container.appendChild(line);
+        this.container.parentElement.scrollTop = this.container.parentElement.scrollHeight;
+      }
+
+      static escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    }
+
+    /* -----------------------------------------------------
+       2. BOOT SEQUENCE CONTROLLER
+       ----------------------------------------------------- */
+    class BootSequence {
+      constructor() {
+        this.overlay = document.getElementById('boot-overlay');
+        this.textEl = document.getElementById('boot-text');
+        this.progressEl = document.getElementById('boot-progress');
+        this.lines = [
+          'MCORD-X KERNEL v2.6.4 Yükleniyor...',
+          'Bellek modülleri doğrulanıyor... [OK]',
+          'Neural TTS motoru başlatılıyor... [OK]',
+          'Bluetooth adaptörü kontrol ediliyor... [OK]',
+          'SD Kart kontrolcüsü devreye alınıyor... [OK]',
+          'Ses görselleştirici başlatılıyor... [OK]',
+          'Arayüz render ediliyor...',
+          'SİSTEM HAZIR.'
+        ];
+      }
+
+      async start() {
+        for (let i = 0; i < this.lines.length; i++) {
+          await this.typeLine(this.lines[i]);
+          const progress =  ((i + 1) / this.lines.length) * 100;
+          this.progressEl.style.width = `${progress}%`;
+          await this.delay(300);
         }
+        await this.delay(500);
+        this.overlay.style.opacity = '0';
+        setTimeout(() => {
+          this.overlay.style.display = 'none';
+          document.getElementById('app').style.opacity = '1';
+          SystemLog.log('MCORD-X başarıyla başlatıldı.', 'success');
+        }, 800);
+      }
+
+      async typeLine(text) {
+        this.textEl.textContent = '';
+        for (let char of text) {
+          this.textEl.textContent += char;
+          await this.delay(20 + Math.random() * 30);
+        }
+      }
+
+      delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
     }
 
-    // 2. Gerçek TTS (Konuşturma)
-    function speakText() {
-        const text = document.getElementById('voiceMsg').value || "Mcord System Active";
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'tr-TR';
-        window.speechSynthesis.speak(msg);
-    }
+    /* -----------------------------------------------------
+       3. TTS ENGINE (SpeechSynthesis + Google TTS Download)
+       ----------------------------------------------------- */
+    class TTSEngine {
+      constructor() {
+        this.input = document.getElementById('tts-input');
+        this.pitchSlider = document.getElementById('pitch-slider');
+        this.rateSlider = document.getElementById('rate-slider');
+        this.pitchVal = document.getElementById('pitch-val');
+        this.rateVal = document.getElementById('rate-val');
+        this.synth = window.speechSynthesis;
+        
+        this.bindEvents();
+      }
 
-    // 3. Gerçek Dosya Yönetimi
-    function updateList() {
-        const input = document.getElementById('musicFiles');
-        files = Array.from(input.files);
-        document.getElementById('playlist-viewer').innerHTML = files.map(f => `> ${f.name}`).join('<br>');
-    }
-
-    function writeToCard() {
-        if(files.length === 0) return alert("Select files first!");
-        files.forEach(file => {
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(file);
-            link.download = file.name;
-            link.click();
+      bindEvents() {
+        this.pitchSlider.addEventListener('input', (e) => {
+          this.pitchVal.textContent = e.target.value;
         });
-        statusTxt.innerText = "FILES EXPORTED TO BUFFER";
-    }
-</script>
+        this.rateSlider.addEventListener('input', (e) => {
+          this.rateVal.textContent = e.target.value;
+        });
 
+        document.getElementById('btn-speak').addEventListener('click', () => this.speak());
+        document.getElementById('btn-download-tts').addEventListener('click', () => this.downloadTTS());
+      }
+
+      speak() {
+        const text = this.input.value.trim();
+        if (!text) {
+          SystemLog.log('Seslendirilecek metin boş.', 'error');
+          return;
+        }
+
+        if (this.synth.speaking) {
+          this.synth.cancel();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'tr-TR';
+        utterance.pitch = parseFloat(this.pitchSlider.value);
+        utterance.rate = parseFloat(this.rateSlider.value);
+
+        // Ses görselleştirici ile senkronizasyon
+        utterance.onstart = () => {
+          SystemLog.log('TTS çıkışı başladı.', 'info');
+          document.getElementById('status-audio').classList.add('active');
+          document.getElementById('status-audio').textContent = 'AUDIO: ACTIVE';
+          AudioVisualizer.start();
+        };
+
+        utterance.onend = () => {
+          SystemLog.log('TTS çıkışı tamamlandı.', 'success');
+          document.getElementById('status-audio').classList.remove('active');
+          document.getElementById('status-audio').textContent = 'AUDIO: IDLE';
+          AudioVisualizer.stop();
+        };
+
+        utterance.onerror = (e) => {
+          SystemLog.log(`TTS Hatası: ${e.error}`, 'error');
+          AudioVisualizer.stop();
+        };
+
+        this.synth.speak(utterance);
+      }
+
+      /**
+       * Google Translate TTS API üzerinden MP3 indirme.
+       * Not: Tarayıcı CORS politikaları nedeniyle fetch başarısız olabilir.
+       * Bu durumda ses yeni sekmede açılır.
+       */
+      async downloadTTS() {
+        const text = this.input.value.trim();
+        if (!text) {
+          SystemLog.log('İndirilecek metin boş.', 'error');
+          return;
+        }
+
+        const lang = 'tr';
+        const encoded = encodeURIComponent(text);
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=${lang}&client=tw-ob&ttsspeed=${this.rateSlider.value}`;
+
+        SystemLog.log('Google TTS üzerinden MP3 isteği gönderiliyor...', 'info');
+
+        try {
+          // CORS kısıtlamaları nedeniyle bu fetch çoğu tarayıcıda engellenir
+          const response = await fetch(url, { mode: 'no-cors' });
+          // no-cors ile opaque response gelir, indirilemez.
+          // Bu nedenle doğrudan açma yöntemine fallback yapılır.
+          throw new Error('CORS Policy');
+        } catch (e) {
+          SystemLog.log('CORS kısıtlaması: Ses yeni sekmede açılıyor...', 'warning');
+          window.open(url, '_blank');
+        }
+      }
+    }
+
+    /* -----------------------------------------------------
+       4. AUDIO VISUALIZER (Canvas Waveform)
+       ----------------------------------------------------- */
+    const AudioVisualizer = {
+      canvas: document.getElementById('visualizer-canvas'),
+      ctx: null,
+      active: false,
+      time: 0,
+      animId: null,
+
+      init() {
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      },
+
+      resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = 180;
+      },
+
+      start() {
+        if (this.active) return;
+        this.active = true;
+        document.getElementById('viz-status').textContent = 'SİNYAL ALGILANIYOR...';
+        document.getElementById('viz-status').classList.add('active');
+        this.draw();
+      },
+
+      stop() {
+        this.active = false;
+        cancelAnimationFrame(this.animId);
+        document.getElementById('viz-status').textContent = 'SİSTEM BEKLEMEDE';
+        document.getElementById('viz-status').classList.remove('active');
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      },
+
+      draw() {
+        if (!this.active) return;
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const cy = h / 2;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00f2ff';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f2ff';
+
+        // Çoklu dalga katmanları
+        for (let layer = 0; layer < 3; layer++) {
+          ctx.beginPath();
+          const amplitude = 20 + layer * 15;
+          const frequency = 0.02 + layer * 0.01;
+          const speed = this.time * (2 + layer);
+
+          for (let x = 0; x < w; x++) {
+            const y = cy + Math.sin(x * frequency + speed * 0.05) * amplitude * Math.sin(this.time * 0.02);
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.globalAlpha = 0.6 - layer * 0.15;
+          ctx.stroke();
+        }
+
+        ctx.globalAlpha = 1.0;
+        ctx.shadowBlur = 0;
+
+        // Orta çizgi
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(0, cy);
+        ctx.lineTo(w, cy);
+        ctx.stroke();
+
+        this.time += 1;
+        this.animId = requestAnimationFrame(() => this.draw());
+      }
+    };
+
+    /* -----------------------------------------------------
+       5. BLUETOOTH MANAGER (Web Bluetooth API)
+       ----------------------------------------------------- */
+    class BluetoothManager {
+      constructor() {
+        this.deviceList = document.getElementById('bt-device-list');
+        this.connectedDevice = null;
+        
+        document.getElementById('btn-scan-bt').addEventListener('click', () => this.scan());
+      }
+
+      async scan() {
+        if (!('bluetooth' in navigator)) {
+          SystemLog.log('Web Bluetooth API desteklenmiyor. Chrome/Edge kullanın.', 'error');
+          return;
+        }
+
+        SystemLog.log('Bluetooth taraması başlatıldı...', 'info');
+
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: ['generic_access', 'battery_service', 'audio_sink']
+          });
+
+          this.renderDevice(device);
+          SystemLog.log(`Cihaz bulundu: ${device.name || 'Bilinmeyen'}`, 'success');
+          document.getElementById('status-bt').classList.add('active');
+          document.getElementById('status-bt').textContent = 'BT: SCANNING';
+
+        } catch (error) {
+          if (error.name !== 'NotFoundError') {
+            SystemLog.log(`Bluetooth Hatası: ${error.message}`, 'error');
+          } else {
+            SystemLog.log('Tarama iptal edildi.', 'warning');
+          }
+        }
+      }
+
+      renderDevice(device) {
+        const li = document.createElement('li');
+        li.className = 'list-item';
+        li.innerHTML = `
+          <div>
+            <div class="list-item-name">${this.escapeHtml(device.name || 'Bilinmeyen Cihaz')}</div>
+            <div class="list-item-meta">ID: ${device.id}</div>
+          </div>
+          <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">BAĞLAN</button>
+        `;
+
+        const btn = li.querySelector('button');
+        btn.addEventListener('click', async () => {
+          try {
+            btn.textContent = '...';
+            const server = await device.gatt.connect();
+            SystemLog.log(`${device.name || 'Cihaz'} bağlandı.`, 'success');
+            document.getElementById('status-bt').textContent = 'BT: CONNECTED';
+            btn.textContent = 'BAĞLI';
+            btn.style.borderColor = 'var(--success)';
+            btn.style.color = 'var(--success)';
+            
+            device.addEventListener('gattserverdisconnected', () => {
+              SystemLog.log(`${device.name || 'Cihaz'} bağlantısı koptu.`, 'warning');
+              document.getElementById('status-bt').textContent = 'BT: OFFLINE';
+              document.getElementById('status-bt').classList.remove('active');
+              btn.textContent = 'BAĞLAN';
+              btn.style.borderColor = '';
+              btn.style.color = '';
+            });
+          } catch (e) {
+            SystemLog.log(`Bağlantı hatası: ${e.message}`, 'error');
+            btn.textContent = 'HATA';
+          }
+        });
+
+        this.deviceList.appendChild(li);
+      }
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    }
+
+    /* -----------------------------------------------------
+       6. SD CARD MANAGER (Pseudo-Upload / Blob URL)
+       ----------------------------------------------------- */
+    class SDManager {
+      constructor() {
+        this.fileInput = document.getElementById('sd-file-input');
+        this.fileList = document.getElementById('sd-file-list');
+        this.files = new Map(); // name -> { file, blobUrl }
+        
+        this.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+      }
+
+      handleFiles(fileList) {
+        if (!fileList.length) return;
+        
+        Array.from(fileList).forEach(file => {
+          if (file.type !== 'audio/mpeg' && !file.name.endsWith('.mp3')) {
+            SystemLog.log(`Geçersiz format: ${file.name}`, 'error');
+            return;
+          }
+
+          // Blob URL oluştur (pseudo-upload temeli)
+          const blobUrl = URL.createObjectURL(file);
+          this.files.set(file.name, { file, blobUrl });
+          this.renderFile(file, blobUrl);
+          
+          SystemLog.log(`${file.name} kuyruğa eklendi.`, 'info');
+          document.getElementById('status-sd').textContent = 'SD: PROCESSING';
+        });
+
+        this.fileInput.value = ''; // Reset input
+      }
+
+      renderFile(file, blobUrl) {
+        const li = document.createElement('li');
+        li.className = 'list-item';
+        li.style.flexDirection = 'column';
+        li.style.alignItems = 'flex-start';
+        li.style.gap = '0.5rem';
+
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+        li.innerHTML = `
+          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+            <div>
+              <div class="list-item-name">${this.escapeHtml(file.name)}</div>
+              <div class="list-item-meta">${sizeMB} MB</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a class="btn" style="text-decoration: none; padding: 0.4rem 0.8rem; font-size: 0.75rem;" href="${blobUrl}" download="${file.name}">İNDİR</a>
+              <button class="btn danger" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" data-name="${this.escapeHtml(file.name)}">SİL</button>
+            </div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="prog-${this.escapeHtml(file.name)}"></div>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-dim);" id="status-${this.escapeHtml(file.name)}">Bekliyor...</div>
+        `;
+
+        // Silme olayı
+        li.querySelector('button').addEventListener('click', (e) => {
+          const name = e.target.dataset.name;
+          URL.revokeObjectURL(this.files.get(name).blobUrl);
+          this.files.delete(name);
+          li.remove();
+          SystemLog.log(`${name} kaldırıldı.`, 'warning');
+          if (this.files.size === 0) {
+            document.getElementById('status-sd').textContent = 'SD: STANDBY';
+          }
+        });
+
+        this.fileList.appendChild(li);
+
+        // Pseudo-upload simülasyonu başlat
+        this.simulateUpload(file.name, li.querySelector(`#prog-${this.escapeHtml(file.name)}`), li.querySelector(`#status-${this.escapeHtml(file.name)}`));
+      }
+
+      simulateUpload(fileName, progressBar, statusText) {
+        let progress = 0;
+        statusText.textContent = 'SD Kart\'a yazılıyor...';
+        
+        const interval = setInterval(() => {
+          progress += Math.random() * 15;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            progressBar.style.width = '100%';
+            progressBar.classList.add('complete');
+            statusText.textContent = 'Hazır (Blob URL Aktif)';
+            statusText.style.color = 'var(--success)';
+            SystemLog.log(`${fileName} SD karta hazırlandı.`, 'success');
+          } else {
+            progressBar.style.width = `${progress}%`;
+          }
+        }, 300);
+      }
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    }
+
+    /* -----------------------------------------------------
+       7. SERVICE WORKER (PWA Offline Support)
+       ----------------------------------------------------- */
+    class PWAInstaller {
+      static init() {
+        if (!('serviceWorker' in navigator)) {
+          SystemLog.log('Service Worker desteklenmiyor.', 'warning');
+          return;
+        }
+
+        const swCode = `
+          self.addEventListener('install', e => {
+            self.skipWaiting();
+          });
+          self.addEventListener('activate', e => {
+            e.waitUntil(self.clients.claim());
+          });
+          self.addEventListener('fetch', e => {
+            e.respondWith(fetch(e.request).catch(() => new Response('OFFLINE MODE', { status: 503 })));
+          });
+        `;
+
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+
+        navigator.serviceWorker.register(swUrl)
+          .then(() => SystemLog.log('Service Worker kaydedildi. PWA modu aktif.', 'success'))
+          .catch(err => SystemLog.log(`SW Kayıt Hatası: ${err.message}`, 'error'));
+      }
+    }
+
+    /* -----------------------------------------------------
+       8. APP INITIALIZATION
+       ----------------------------------------------------- */
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Görselleştirici canvas boyutlandırma
+      AudioVisualizer.init();
+
+      // Boot sequence başlat
+      const boot = new BootSequence();
+      await boot.start();
+
+      // Modülleri başlat
+      window.ttsEngine = new TTSEngine();
+      window.btManager = new BluetoothManager();
+      window.sdManager = new SDManager();
+
+      // PWA Service Worker
+      PWAInstaller.init();
+
+      // Başlangıç logları
+      SystemLog.log('TTS Motoru hazır.', 'success');
+      SystemLog.log('Bluetooth modülü hazır.', 'success');
+      SystemLog.log('SD Yönetici hazır.', 'success');
+      SystemLog.log('MCORD-X tamamen operasyonel.', 'success');
+    });
+  </script>
 </body>
-  </html>
-  
+</html>
